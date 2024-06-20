@@ -630,8 +630,12 @@ function imgui_mine_output()
             total_worth = total_worth + hgather.pricing[k] * v;
             itemTotal = v * hgather.pricing[k];
         end
+
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
+        end
               
-        output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
     imgui.Text(output_text);
@@ -697,7 +701,11 @@ function imgui_exca_output()
             itemTotal = v * hgather.pricing[k];
         end
               
-        output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
+        end
+              
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
     imgui.Text(output_text);
@@ -764,7 +772,11 @@ function imgui_logg_output()
             itemTotal = v * hgather.pricing[k];
         end
               
-        output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
+        end
+              
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
     imgui.Text(output_text);
@@ -828,6 +840,10 @@ function imgui_harv_output()
         if (hgather.pricing[k] ~= nil) then
             total_worth = total_worth + hgather.pricing[k] * v;
             itemTotal = v * hgather.pricing[k];
+        end
+              
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
         end
               
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
