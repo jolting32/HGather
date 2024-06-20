@@ -8,7 +8,7 @@
 
 addon.name      = 'hgather';
 addon.author    = 'Hastega';
-addon.version   = '1.6';
+addon.version   = '1.6.2';
 addon.desc      = 'General purpose gathering tracker.';
 addon.link      = 'https://github.com/SlowedHaste/HGather';
 addon.commands  = {'/hgather'};
@@ -40,7 +40,7 @@ local default_settings = T{
         gysahl_subtract = T{ false, },
         skillup_display = T{ true, },
         ore_display = T{ false, },
-        dig_skill = T{ 0 },
+        dig_skill = T{ },
     },
     mining = T {
         pickaxe_cost = T{ 120 },
@@ -103,6 +103,7 @@ local hgather = T{
     last_attempt = 0,
     last_item = '',
     attempt_type = '',
+    imgui_window = '',
 
     pricing = T{ },
 
@@ -127,6 +128,11 @@ local hgather = T{
     logging = T{
         logg_gph = 0,
     }
+};
+
+local colors = {
+    red = { 0.80, 0.22, 0.00, 1.0 },
+    green = { 0.60, 0.80, 0.20, 1.0 },
 };
 
 --[[
@@ -218,6 +224,7 @@ function render_general_config(settings)
     imgui.EndChild();
     imgui.Text('Chocobo Digging Display Settings');
     imgui.BeginChild('dig_general', { 0, 110, }, true);
+        -- TODO BUGFIX I don't understand why skill gets reset to 0 sometimes when the config is opened
         imgui.InputFloat('Digging Skill', hgather.settings.digging.dig_skill, 0.1, 0.1, '%.1f');
         imgui.ShowHelp('Current digging skill level.');
         imgui.Checkbox('Digging Skillups', hgather.settings.digging.skillup_display);
@@ -338,8 +345,141 @@ function format_int(number)
     end
 end
 
+function imgui_dig_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
+    local inv = AshitaCore:GetMemoryManager():GetInventory();
+    local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
+
+    local total_worth = 0;
+    local accuracy = 0;
+    local moon_table = GetMoon();
+    local moon_phase = moon_table.MoonPhase;
+    local moon_percent = moon_table.MoonPhasePercent;
+    local weather = GetWeather();
+
+    -- dig accuracy estimate formulas taken from ASB
+    local digRate = 0.85;
+    local digRank = math.floor(hgather.settings.digging.dig_skill[1] / 10);
+    local itemCap = 100 + (digRank * 10);
+    local moonModifier = 1;
+    local skillModifier = 0.5 + (digRank / 20);
+    local moon_dist = moon_table.MoonPhasePercent;
+    if moon_dist < 50 then
+        moon_dist = 100 - moon_dist -- This converts moon phase percent to a number that represents how FAR the moon phase is from 50
+    end
+
+    moonModifier = 1 - (100 - moon_dist) / 100 -- the more the moon phase is from 50, the closer we get to 100% on this modifier.    
+    local accEstimate = (digRate * moonModifier * skillModifier) * 100;
+
+    if (hgather.settings.dig_tries ~= 0) then
+        accuracy = (hgather.settings.dig_items / hgather.settings.dig_tries) * 100;
+    end
+
+    -- count greens (only in main inventory)
+    local greens_total = 0;
+    for y = 0, 80 do
+        local item = inv:GetContainerItem(0, y);
+        if (item ~= nil and item.Id == 4545) then
+            greens_total = greens_total + item.Count;
+        end
+    end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
+        
+    output_text = 'Attempted Digs: ' .. hgather.settings.dig_tries .. ' (' .. string.format('%.2f', hgather.digging.dig_per_minute) .. ' dpm)';
+    output_text = output_text .. '\nGreens Cost: ' .. format_int(hgather.settings.dig_tries * hgather.settings.digging.gysahl_cost[1]);
+    output_text = output_text .. '\nGreens Remaining: ' .. format_int(greens_total) .. ' (' .. math.floor(greens_total * (digRate * moonModifier * skillModifier)) .. ' est items)';
+    output_text = output_text .. '\nItems Dug: ' .. hgather.settings.dig_items .. ' (' .. itemCap - hgather.settings.dig_items .. ' to fatigue)';
+    imgui.Text(output_text);
+    output_text = '';
+
+    if (hgather.settings.lastitem_display[1]) then
+        imgui.Text('Last Item:');
+        imgui.SameLine();
+        if (hgather.digging.zone_empty[1]) then
+            imgui.TextColored(imgui_colors.RED, 'ZONE EMPTY');
+        else
+            imgui.Text(hgather.last_item);
+        end
+    end
+    output_text = output_text .. 'Dig Accuracy: ' .. string.format('%.1f', accuracy) .. '% act -- ' .. string.format('%.1f', accEstimate) .. '% est';
+    if (hgather.settings.moon_display[1]) then
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
+    end
+    imgui.Text(output_text);
+    output_text = '';
+    if (hgather.settings.weather_display[1]) then
+        imgui.Text('Weather: ');
+        imgui.SameLine();
+        imgui.TextColored(weather_colors[weather], weather);
+    end
+
+    -- moon phase Waxing Crescent, between 7-24%, active weather (not clear/sunshine/clouds)
+    if (hgather.settings.digging.ore_display[1]) then
+        imgui.Text('Ore Possible?: ');
+        imgui.SameLine();
+
+        if (hgather.digging.zone_empty[1]) then
+            imgui.TextColored(imgui_colors.RED, 'No - EMPTY ZONE');
+        elseif (moon_phase == 'Waxing Crescent' and (moon_percent > 6 and moon_percent < 25)) then
+            local bad_weather = T{'Clear', 'Sunshine', 'Clouds'};
+            if (not bad_weather:contains(weather)) then
+                imgui.TextColored(imgui_colors.GREEN, 'Yes!');
+            end
+        else
+            imgui.TextColored(imgui_colors.ORANGE, 'No');
+        end
+    end
+
+    if (hgather.settings.digging.skillup_display[1]) then
+        output_text = output_text .. 'Dig skill: ' .. string.format('%.1f', hgather.settings.digging.dig_skill[1]) .. ' (' .. hgather.digging.dig_skillup .. '+)';
+    end
+
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
+    for k,v in pairs(hgather.settings.dig_rewards) do
+        itemTotal = 0;
+        if (hgather.pricing[k] ~= nil) then
+            total_worth = total_worth + hgather.pricing[k] * v;
+            itemTotal = v * hgather.pricing[k];
+        end
+
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
+        end
+              
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+    end
+
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
+    if (hgather.settings.digging.gysahl_subtract[1]) then
+        total_worth = total_worth - (hgather.settings.dig_tries * hgather.settings.digging.gysahl_cost[1]);
+        -- only update gil_per_hour every 3 seconds
+        if ((ashita.time.clock()['s'] % 3) == 0) then
+            hgather.digging.dig_gph = math.floor((total_worth / elapsed_time) * 3600); 
+        end
+        output_text = 'Gil Made (minus greens): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.digging.dig_gph) .. ' gph)';
+    else
+        -- only update gil_per_hour every 3 seconds
+        if ((ashita.time.clock()['s'] % 3) == 0) then
+            hgather.digging.dig_gph = math.floor((total_worth / elapsed_time) * 3600); 
+        end
+        output_text = 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.digging.dig_gph) .. ' gph)';
+    end
+    imgui.Text(output_text);
+end
+
 ----------------------------------------------------------------------------------------------------
--- Format the output used in display window and report
+-- Format the output used in the report
 ----------------------------------------------------------------------------------------------------
 function format_dig_output()
     local inv = AshitaCore:GetMemoryManager():GetInventory();
@@ -393,9 +533,9 @@ function format_dig_output()
             output_text = output_text .. '\nLast Item: ' .. hgather.last_item;
         end
     end
-    output_text = output_text .. '\nDig Accuracy: ' .. string.format('%.1f', accuracy) .. '%% act -- ' .. string.format('%.1f', accEstimate) .. '%% est';
+    output_text = output_text .. '\nDig Accuracy: ' .. string.format('%.1f', accuracy) .. '% act -- ' .. string.format('%.1f', accEstimate) .. '% est';
     if (hgather.settings.moon_display[1]) then
-        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%%)';
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
     if (hgather.settings.weather_display[1]) then
         output_text = output_text .. '\nWeather: ' + weather;
@@ -452,7 +592,8 @@ function format_dig_output()
     return output_text;
 end
 
-function format_mine_output()
+function imgui_mine_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -466,18 +607,22 @@ function format_mine_output()
     if (hgather.settings.mine_tries ~= 0) then
         accuracy = (hgather.settings.mine_items / hgather.settings.mine_tries) * 100;
     end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
-    output_text = '~~~~~~ HGather Mining Session ~~~~~~~';
-    output_text = output_text .. '\nPickaxe Swings: ' .. hgather.settings.mine_tries;
+    output_text = output_text .. 'Pickaxe Swings: ' .. hgather.settings.mine_tries;
     output_text = output_text .. '\nPickaxe Cost: ' .. format_int(hgather.settings.mine_break * hgather.settings.mining.pickaxe_cost[1]);
     output_text = output_text .. '\nItems Mined: ' .. hgather.settings.mine_items;
-    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%%';
+    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
-        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%%)';
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
 
     for k,v in pairs(hgather.settings.mine_rewards) do
         itemTotal = 0;
@@ -489,27 +634,32 @@ function format_mine_output()
         output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
     if (hgather.settings.mining.pickaxe_subtract[1]) then
         total_worth = total_worth - (hgather.settings.mine_break * hgather.settings.mining.pickaxe_cost[1]);
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.mining.mine_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made (minus pickaxes): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.mining.mine_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made (minus pickaxes): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.mining.mine_gph) .. ' gph)';
     else
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.mining.mine_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.mining.mine_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.mining.mine_gph) .. ' gph)';
     end
 
-    return output_text;
+    imgui.Text(output_text);
 end
 
-function format_exca_output()
+function imgui_exca_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -523,18 +673,22 @@ function format_exca_output()
     if (hgather.settings.exca_tries ~= 0) then
         accuracy = (hgather.settings.exca_items / hgather.settings.exca_tries) * 100;
     end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
-    output_text = '~~~~~~ HGather Excavate Session ~~~~~';
-    output_text = output_text .. '\nPickaxe Swings: ' .. hgather.settings.exca_tries;
+    output_text = output_text .. 'Pickaxe Swings: ' .. hgather.settings.exca_tries;
     output_text = output_text .. '\nPickaxe Cost: ' .. format_int(hgather.settings.exca_break * hgather.settings.mining.pickaxe_cost[1]);
     output_text = output_text .. '\nItems Excavated: ' .. hgather.settings.exca_items;
-    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%%';
+    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
-        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%%)';
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
 
     for k,v in pairs(hgather.settings.exca_rewards) do
         itemTotal = 0;
@@ -546,29 +700,33 @@ function format_exca_output()
         output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
     if (hgather.settings.mining.pickaxe_subtract[1]) then
         total_worth = total_worth - (hgather.settings.exca_break * hgather.settings.mining.pickaxe_cost[1]);
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.excavate.exca_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made (minus pickaxes): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.excavate.exca_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made (minus pickaxes): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.excavate.exca_gph) .. ' gph)';
     else
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.excavate.exca_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.excavate.exca_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.excavate.exca_gph) .. ' gph)';
     end
 
-    return output_text;
+    imgui.Text(output_text);
 end
 
 
-
-function format_logg_output()
+function imgui_logg_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -582,18 +740,22 @@ function format_logg_output()
     if (hgather.settings.logg_tries ~= 0) then
         accuracy = (hgather.settings.logg_items / hgather.settings.logg_tries) * 100;
     end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
-    output_text = '~~~~~~ HGather Logging Session ~~~~~';
-    output_text = output_text .. '\nHatchet Swings: ' .. hgather.settings.logg_tries;
+    output_text = output_text .. 'Hatchet Swings: ' .. hgather.settings.logg_tries;
     output_text = output_text .. '\nHatchet Cost: ' .. format_int(hgather.settings.logg_break * hgather.settings.logging.hatchet_cost[1]);
     output_text = output_text .. '\nItems Chopped: ' .. hgather.settings.logg_items;
-    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%%';
+    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
-        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%%)';
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
 
     for k,v in pairs(hgather.settings.logg_rewards) do
         itemTotal = 0;
@@ -605,28 +767,32 @@ function format_logg_output()
         output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
     if (hgather.settings.logging.hatchet_subtract[1]) then
         total_worth = total_worth - (hgather.settings.logg_break * hgather.settings.logging.hatchet_cost[1]);
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.logging.logg_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made (minus hatchets): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.logging.logg_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made (minus hatchets): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.logging.logg_gph) .. ' gph)';
     else
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.logging.logg_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.logging.logg_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.logging.logg_gph) .. ' gph)';
     end
-
-    return output_text;
+    imgui.Text(output_text);
 end
 
 
-function format_harv_output()
+function imgui_harv_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -640,18 +806,22 @@ function format_harv_output()
     if (hgather.settings.harv_tries ~= 0) then
         accuracy = (hgather.settings.harv_items / hgather.settings.harv_tries) * 100;
     end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
-    output_text = '~~~~~~ HGather Harvesting Session ~~~~~';
-    output_text = output_text .. '\nSickle Swings: ' .. hgather.settings.harv_tries;
+    output_text = 'Sickle Swings: ' .. hgather.settings.harv_tries;
     output_text = output_text .. '\nSickle Cost: ' .. format_int(hgather.settings.harv_break * hgather.settings.harvest.sickle_cost[1]);
     output_text = output_text .. '\nItems Harvested: ' .. hgather.settings.harv_items;
-    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%%';
+    output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
-        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%%)';
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
 
     for k,v in pairs(hgather.settings.harv_rewards) do
         itemTotal = 0;
@@ -660,28 +830,32 @@ function format_harv_output()
             itemTotal = v * hgather.pricing[k];
         end
               
-        output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
-    -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
     if (hgather.settings.harvest.sickle_subtract[1]) then
         total_worth = total_worth - (hgather.settings.harv_break * hgather.settings.harvest.sickle_cost[1]);
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.harvest.harv_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made (minus sickles): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.harvest.harv_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made (minus sickles): ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.harvest.harv_gph) .. ' gph)';
     else
         -- only update gil_per_hour every 3 seconds
         if ((ashita.time.clock()['s'] % 3) == 0) then
             hgather.harvest.harv_gph = math.floor((total_worth / elapsed_time) * 3600); 
         end
-        output_text = output_text .. '\nGil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.harvest.harv_gph) .. ' gph)';
+        output_text = output_text .. 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.harvest.harv_gph) .. ' gph)';
     end
-
-    return output_text;
+    imgui.Text(output_text);
 end
+
 
 function clear_rewards(args)
     hgather.last_attempt = 0;
@@ -714,7 +888,7 @@ function clear_rewards(args)
         hgather.settings.logg_items = 0;
         hgather.settings.logg_tries = 0;
     elseif (#args == 3) then
-        if (args[3]:any('dig')) then
+        if (args[3]:any('digg')) then
             hgather.settings.dig_rewards = { };
             hgather.settings.dig_items = 0;
             hgather.settings.dig_tries = 0;
@@ -746,6 +920,7 @@ function clear_rewards(args)
         end
     end
 end
+
 
 ----------------------------------------------------------------------------------------------------
 -- Helper functions borrowed from luashitacast
@@ -957,7 +1132,7 @@ function print_help(isError)
         { '/hgather save', 'Saves the current settings to disk.' },
         { '/hgather reload', 'Reloads the current settings from disk.' },
         { '/hgather report', 'Reports the current session to chat window.' },
-        { '/hgather clear', 'Clears the HGather session stats (all: default | dig | mine | exca).' },
+        { '/hgather clear', 'Clears the HGather session stats (all: default | digg | harv | exca | logg | mine).' },
         { '/hgather show', 'Shows the HGather information.' },
         { '/hgather hide', 'Hides the HGather information.' },
     };
@@ -1129,6 +1304,12 @@ ashita.events.register('packet_out', 'packet_out_cb', function (e)
             if (hgather.settings.first_attempt == 0) then
                 hgather.settings.first_attempt = ashita.time.clock()['ms'];
             end
+        elseif (hgather.imgui_window == 'harvest' or hgather.imgui_window == 'excavate' or hgather.imgui_window == 'logging' or hgather.imgui_window == 'mining') then
+            hgather.attempt_type = hgather.imgui_window;
+            hgather.last_attempt = ashita.time.clock()['ms'];
+            if (hgather.settings.first_attempt == 0) then
+                hgather.settings.first_attempt = ashita.time.clock()['ms'];
+            end
         end
     end
 end);
@@ -1261,23 +1442,28 @@ ashita.events.register('d3d_present', 'present_cb', function ()
         imgui.SetWindowFontScale(hgather.settings.font_scale[1]);
         if (imgui.BeginTabBar('##hgather_helmtabbar', ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)) then
             if (imgui.BeginTabItem('Digg', nil)) then
-                imgui.Text(format_dig_output());
+                hgather.imgui_window = 'digging';
+                imgui_dig_output();
                 imgui.EndTabItem();
             end
             if (imgui.BeginTabItem('Harv', nil)) then
-                imgui.Text(format_harv_output());
+                hgather.imgui_window = 'harvest';
+                imgui_harv_output();
                 imgui.EndTabItem();
             end
             if (imgui.BeginTabItem('Exca', nil)) then
-                imgui.Text(format_exca_output());
+                hgather.imgui_window = 'excavate';
+                imgui_exca_output();
                 imgui.EndTabItem();
             end
             if (imgui.BeginTabItem('Logg', nil)) then
-                imgui.Text(format_logg_output());
+                hgather.imgui_window = 'logging';
+                imgui_logg_output();
                 imgui.EndTabItem();
             end
             if (imgui.BeginTabItem('Mine', nil)) then
-                imgui.Text(format_mine_output());
+                hgather.imgui_window = 'mining';
+                imgui_mine_output();
                 imgui.EndTabItem();
             end
             imgui.EndTabBar();

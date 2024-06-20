@@ -346,3 +346,50 @@ Weather = T{
     [18] = 'Dark',
     [19] = 'Dark x2'
 };
+
+imgui_colors = T{
+    -- r, g, b, a
+    -- taken from https://github.com/RaraProjects/metrics/blob/Release/resources/colors.lua
+    WHITE    = {1.0, 1.0, 1.0, 1.0},
+    RED      = {1.0, 0.0, 0.0, 1.0},
+    GREEN    = {0.0, 1.0, 0.0, 1.0},
+    BLUE     = {0.0, 0.0, 1.0, 1.0},
+    ORANGE   = {0.9, 0.6, 0.0, 1.0},
+    YELLOW   = {0.9, 1.0, 0.0, 1.0},
+    BR_GREEN = {0.2, 1.0, 0.0, 1.0},
+    PURPLE   = {0.7, 0.2, 1.0, 1.0},
+    DIM      = {0.4, 0.4, 0.4, 1.0},
+    -- Elements
+    LIGHT    = {1.0, 1.0, 1.0, 1.0},
+    DARK     = {0.9, 0.0, 1.0, 1.0},
+    FIRE     = {1.0, 0.0, 0.0, 1.0},
+    ICE      = {0.0, 0.7, 1.0, 1.0},
+    WIND     = {0.0, 1.0, 0.0, 1.0},
+    EARTH    = {0.7, 0.5, 0.0, 1.0},
+    THUNDER  = {0.7, 0.2, 1.0, 1.0},
+    WATER    = {0.3, 0.5, 0.8, 1.0},
+};
+
+weather_colors = T{
+    ['Clear'] = imgui_colors.LIGHT, 
+    ['Sunshine'] = imgui_colors.LIGHT, 
+    ['Clouds'] = imgui_colors.LIGHT, 
+    ['Fog'] = imgui_colors.DARK, 
+    ['Fire'] = imgui_colors.FIRE, 
+    ['Fire x2'] = imgui_colors.FIRE, 
+    ['Water'] = imgui_colors.WATER, 
+    ['Water x2'] = imgui_colors.WATER, 
+    ['Earth'] = imgui_colors.EARTH, 
+    ['Earth x2'] = imgui_colors.EARTH, 
+    ['Wind'] = imgui_colors.WIND, 
+    ['Wind x2'] = imgui_colors.WIND, 
+    ['Ice'] = imgui_colors.ICE, 
+    ['Ice x2'] = imgui_colors.ICE, 
+    ['Thunder'] = imgui_colors.THUNDER, 
+    ['Thunder x2'] = imgui_colors.THUNDER, 
+    ['Light'] = imgui_colors.LIGHT, 
+    ['Light x2'] = imgui_colors.LIGHT, 
+    ['Dark'] = imgui_colors.DARK, 
+    ['Dark x2'] = imgui_colors.DARK, 
+    ['Unknown'] = imgui_colors.LIGHT,
+};
