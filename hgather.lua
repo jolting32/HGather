@@ -394,7 +394,7 @@ function imgui_dig_output()
     output_text = '';
 
     if (hgather.settings.lastitem_display[1]) then
-        imgui.Text('Last Item:');
+        imgui.Text('Last Item: ');
         imgui.SameLine();
         if (hgather.digging.zone_empty[1]) then
             imgui.TextColored(imgui_colors.RED, 'ZONE EMPTY');
