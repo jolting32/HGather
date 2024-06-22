@@ -425,6 +425,8 @@ function imgui_dig_output()
             local bad_weather = T{'Clear', 'Sunshine', 'Clouds'};
             if (not bad_weather:contains(weather)) then
                 imgui.TextColored(imgui_colors.GREEN, 'Yes!');
+            else
+                imgui.TextColored(imgui_colors.ORANGE, 'No');
             end
         else
             imgui.TextColored(imgui_colors.ORANGE, 'No');
