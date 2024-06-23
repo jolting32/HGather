@@ -40,7 +40,7 @@ local default_settings = T{
         gysahl_subtract = T{ false, },
         skillup_display = T{ true, },
         ore_display = T{ false, },
-        dig_skill = T{ },
+        dig_skill = T{ 0 },
     },
     mining = T {
         pickaxe_cost = T{ 120 },
