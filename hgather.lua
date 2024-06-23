@@ -596,6 +596,7 @@ end
 
 function imgui_mine_output()
     local ImGuiStyleVar_ItemSpacing = 13;
+    local inv = AshitaCore:GetMemoryManager():GetInventory();
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -605,6 +606,15 @@ function imgui_mine_output()
     local moon_percent = moon_table.MoonPhasePercent;
 
     local output_text = '';
+    
+    -- count pickaxes (only in main inventory)
+    local pickaxes_total = 0;
+    for y = 0, 80 do
+        local item = inv:GetContainerItem(0, y);
+        if (item ~= nil and item.Id == 605) then
+            pickaxes_total = pickaxes_total + item.Count;
+        end
+    end
 
     if (hgather.settings.mine_tries ~= 0) then
         accuracy = (hgather.settings.mine_items / hgather.settings.mine_tries) * 100;
@@ -613,7 +623,8 @@ function imgui_mine_output()
     imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
     output_text = output_text .. 'Pickaxe Swings: ' .. hgather.settings.mine_tries;
-    output_text = output_text .. '\nPickaxe Cost: ' .. format_int(hgather.settings.mine_break * hgather.settings.mining.pickaxe_cost[1]);
+    output_text = output_text .. '\nPickaxe Cost: ' .. format_int(hgather.settings.mine_break * hgather.settings.mining.pickaxe_cost[1]) .. ' (' .. format_int(hgather.settings.mine_break) .. ' breaks)';
+    output_text = output_text .. '\nPickaxe Remaining: ' .. format_int(pickaxes_total);
     output_text = output_text .. '\nItems Mined: ' .. hgather.settings.mine_items;
     output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
@@ -666,6 +677,7 @@ end
 
 function imgui_exca_output()
     local ImGuiStyleVar_ItemSpacing = 13;
+    local inv = AshitaCore:GetMemoryManager():GetInventory();
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -676,6 +688,15 @@ function imgui_exca_output()
 
     local output_text = '';
 
+    -- count pickaxes (only in main inventory)
+    local pickaxes_total = 0;
+    for y = 0, 80 do
+        local item = inv:GetContainerItem(0, y);
+        if (item ~= nil and item.Id == 605) then
+            pickaxes_total = pickaxes_total + item.Count;
+        end
+    end
+
     if (hgather.settings.exca_tries ~= 0) then
         accuracy = (hgather.settings.exca_items / hgather.settings.exca_tries) * 100;
     end
@@ -683,7 +704,8 @@ function imgui_exca_output()
     imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
     output_text = output_text .. 'Pickaxe Swings: ' .. hgather.settings.exca_tries;
-    output_text = output_text .. '\nPickaxe Cost: ' .. format_int(hgather.settings.exca_break * hgather.settings.mining.pickaxe_cost[1]);
+    output_text = output_text .. '\nPickaxe Cost: ' .. format_int(hgather.settings.exca_break * hgather.settings.mining.pickaxe_cost[1]) .. ' (' .. format_int(hgather.settings.exca_break) .. ' breaks)';
+    output_text = output_text .. '\nPickaxe Remaining: ' .. format_int(pickaxes_total);
     output_text = output_text .. '\nItems Excavated: ' .. hgather.settings.exca_items;
     output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
@@ -737,6 +759,7 @@ end
 
 function imgui_logg_output()
     local ImGuiStyleVar_ItemSpacing = 13;
+    local inv = AshitaCore:GetMemoryManager():GetInventory();
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
 
     local total_worth = 0;
@@ -747,6 +770,15 @@ function imgui_logg_output()
 
     local output_text = '';
 
+    -- count pickaxes (only in main inventory)
+    local hatchets_total = 0;
+    for y = 0, 80 do
+        local item = inv:GetContainerItem(0, y);
+        if (item ~= nil and item.Id == 1021) then
+            hatchets_total = hatchets_total + item.Count;
+        end
+    end
+
     if (hgather.settings.logg_tries ~= 0) then
         accuracy = (hgather.settings.logg_items / hgather.settings.logg_tries) * 100;
     end
@@ -754,7 +786,8 @@ function imgui_logg_output()
     imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
         
     output_text = output_text .. 'Hatchet Swings: ' .. hgather.settings.logg_tries;
-    output_text = output_text .. '\nHatchet Cost: ' .. format_int(hgather.settings.logg_break * hgather.settings.logging.hatchet_cost[1]);
+    output_text = output_text .. '\nHatchet Cost: ' .. format_int(hgather.settings.logg_break * hgather.settings.logging.hatchet_cost[1]) .. ' (' .. format_int(hgather.settings.logg_break) .. ' breaks)';
+    output_text = output_text .. '\nHatchet Remaining: ' .. format_int(hatchets_total);
     output_text = output_text .. '\nItems Chopped: ' .. hgather.settings.logg_items;
     output_text = output_text .. '\nSwing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
