@@ -8,7 +8,7 @@
 
 addon.name      = 'hgather';
 addon.author    = 'Hastega';
-addon.version   = '1.6.2';
+addon.version   = '1.7.0';
 addon.desc      = 'General purpose gathering tracker.';
 addon.link      = 'https://github.com/SlowedHaste/HGather';
 addon.commands  = {'/hgather'};
@@ -25,6 +25,7 @@ local default_settings = T{
     moon_display = T{ true, },
     weather_display = T{ false, },
     lastitem_display = T{ false, },
+    hunt_display = T{ false, },
     display_timeout = T{ 600 },
     opacity = T{ 1.0, },
     padding = T{ 1.0, },
@@ -81,6 +82,10 @@ local default_settings = T{
     logg_items = 0,
     logg_tries = 0,
     logg_break = 0,
+    -- hunting rewards
+    hunt_rewards = T{ },
+    hunt_items = 0,
+    hunt_kills = 0,
 };
 
 -- HGather Variables
@@ -127,12 +132,11 @@ local hgather = T{
     },
     logging = T{
         logg_gph = 0,
-    }
-};
-
-local colors = {
-    red = { 0.80, 0.22, 0.00, 1.0 },
-    green = { 0.60, 0.80, 0.20, 1.0 },
+    },
+    hunting = T{
+        hunt_gph = 0,
+    },
+    myname = '',
 };
 
 --[[
@@ -192,7 +196,7 @@ end
 
 function render_general_config(settings)
     imgui.Text('General Settings');
-    imgui.BeginChild('settings_general', { 0, 230, }, true);
+    imgui.BeginChild('settings_general', { 0, 255, }, true);
         if ( imgui.Checkbox('Visible', hgather.settings.visible) ) then
             -- if the checkbox is interacted with, reset the last_attempt
             -- to force the window back open
@@ -217,6 +221,8 @@ function render_general_config(settings)
         imgui.ShowHelp('Toggles if moon phase / percent is shown.');
         imgui.Checkbox('Weather Display', hgather.settings.weather_display);
         imgui.ShowHelp('Toggles if current weather is shown.');
+        imgui.Checkbox('Hunting Display', hgather.settings.hunt_display);
+        imgui.ShowHelp('Toggles if hunt mode is shown.');
         imgui.Checkbox('Last Item Display', hgather.settings.lastitem_display);
         imgui.ShowHelp('Toggles if last item gathered is displayed.');
         imgui.Checkbox('Reset Rewards On Load', hgather.settings.reset_on_load);
@@ -908,6 +914,66 @@ function imgui_harv_output()
 end
 
 
+function imgui_hunt_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
+    local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
+
+    local total_worth = 0;
+    local accuracy = 0;
+    local moon_table = GetMoon();
+    local moon_phase = moon_table.MoonPhase;
+    local moon_percent = moon_table.MoonPhasePercent;
+
+    local output_text = '';
+
+    if (hgather.settings.hunt_kills ~= 0) then
+        accuracy = (hgather.settings.hunt_items / hgather.settings.hunt_kills) * 100;
+    end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
+        
+    output_text = 'Mobs Hunted: ' .. hgather.settings.hunt_kills;
+    output_text = output_text .. '\nItems Obtained: ' .. hgather.settings.hunt_items;
+    output_text = output_text .. '\nMob Output: ' .. string.format('%.2f', accuracy) .. '%';
+    if (hgather.settings.moon_display[1]) then
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
+    end
+
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
+    for k,v in pairs(hgather.settings.hunt_rewards) do
+        itemTotal = 0;
+        if (hgather.pricing[k] ~= nil) then
+            total_worth = total_worth + hgather.pricing[k] * v;
+            itemTotal = v * hgather.pricing[k];
+        end
+              
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
+        end
+              
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+    end
+
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
+    -- only update gil_per_hour every 3 seconds
+    if ((ashita.time.clock()['s'] % 3) == 0) then
+        hgather.hunting.hunt_gph = math.floor((total_worth / elapsed_time) * 3600); 
+    end
+    output_text = output_text .. 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.hunting.hunt_gph) .. ' gph)';
+    imgui.Text(output_text);
+end
+
+
 function clear_rewards(args)
     hgather.last_attempt = 0;
     hgather.settings.first_attempt = 0;
@@ -938,6 +1004,10 @@ function clear_rewards(args)
         hgather.settings.logg_break = 0;
         hgather.settings.logg_items = 0;
         hgather.settings.logg_tries = 0;
+        -- hunting
+        hgather.settings.hunt_rewards = { };
+        hgather.settings.hunt_break = 0;
+        hgather.settings.hunt_items = 0;
     elseif (#args == 3) then
         if (args[3]:any('digg')) then
             hgather.settings.dig_rewards = { };
@@ -968,6 +1038,11 @@ function clear_rewards(args)
             hgather.settings.logg_break = 0;
             hgather.settings.logg_items = 0;
             hgather.settings.logg_tries = 0;
+        elseif (args[3]:any('hunt')) then
+            -- hunting
+            hgather.settings.hunt_rewards = { };
+            hgather.settings.hunt_break = 0;
+            hgather.settings.hunt_kills = 0;
         end
     end
 end
@@ -1163,6 +1238,30 @@ function handle_logg(harv_success)
     end
 end
 
+--[[
+    * Functions for handling successful/unsuccesful gathering attempts
+    *
+    * @param {string} hunt_success - Item returned from successful hunting
+]]
+function handle_hunt(hunt_success)
+    -- force display to show if it is hidden after an attempt
+    if (hgather.settings.visible[1] == false) then
+        hgather.settings.visible[1] = true
+    end
+
+    -- increment item count and add to rewards list
+    if hunt_success then
+        hgather.settings.hunt_items = hgather.settings.hunt_items + 1;
+
+        if (hunt_success ~= nil) then
+            if (hgather.settings.hunt_rewards[hunt_success] == nil) then
+                hgather.settings.hunt_rewards[hunt_success] = 1;
+            elseif (hgather.settings.hunt_rewards[hunt_success] ~= nil) then
+                hgather.settings.hunt_rewards[hunt_success] = hgather.settings.hunt_rewards[hunt_success] + 1;
+            end
+        end
+    end
+end
 
 --[[
 * Prints the addon help information.
@@ -1217,6 +1316,7 @@ ashita.events.register('load', 'load_cb', function ()
         print('Reset rewards on reload.');
         clear_rewards();
     end
+  	hgather.myname = AshitaCore:GetMemoryManager():GetParty():GetMemberName(0);
 end);
 
 --[[
@@ -1455,6 +1555,13 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
             handle_harv(harv_success);
         end
         hgather.attempt_type = '';
+    elseif (hgather.imgui_window == 'hunting') then
+        local hitem = string.match(message, string.lower(hgather.myname) .. " obtains an? ([^,!]+).");
+        local hkill = string.match(message, string.lower(hgather.myname) .. " defeats the ");
+        if (hkill) then
+            hgather.settings.hunt_kills = hgather.settings.hunt_kills + 1;
+        end
+        handle_hunt(hitem);
     end
 end);
 
@@ -1515,6 +1622,11 @@ ashita.events.register('d3d_present', 'present_cb', function ()
             if (imgui.BeginTabItem('Mine', nil)) then
                 hgather.imgui_window = 'mining';
                 imgui_mine_output();
+                imgui.EndTabItem();
+            end
+            if ((hgather.settings.hunt_display[1]) and (imgui.BeginTabItem('Hunt', nil))) then
+                hgather.imgui_window = 'hunting';
+                imgui_hunt_output();
                 imgui.EndTabItem();
             end
             imgui.EndTabBar();
