@@ -1574,17 +1574,24 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
         local hstealssmp = string.match(message, '%[' .. string.lower(hgather.myname) .. '%] steal .* %(([^,!]+)%)');
         local hitem = string.match(message, string.lower(hgather.myname) .. ' obtains an? ([^,!]+).');
         local hkill = string.match(message, string.lower(hgather.myname) .. ' defeats the ');
+
+        if (hgather.settings.first_attempt == 0) then
+            hgather.settings.first_attempt = ashita.time.clock()['ms'];
+        end
         if (hkill) then
             hgather.settings.hunt_kills = hgather.settings.hunt_kills + 1;
         elseif (hstealt or hstealtsmp) then
             hgather.settings.hunt_stealt = hgather.settings.hunt_stealt + 1;
         end
         if (hitem) then
+            hgather.last_attempt = ashita.time.clock()['ms'];
             handle_hunt(hitem);
         elseif (hsteals) then
+            hgather.last_attempt = ashita.time.clock()['ms'];
             hgather.settings.hunt_steals = hgather.settings.hunt_steals + 1;
             handle_hunt(hsteals);
         elseif (hstealssmp) then
+            hgather.last_attempt = ashita.time.clock()['ms'];
             hgather.settings.hunt_steals = hgather.settings.hunt_steals + 1;
             handle_hunt(hstealssmp);
         end
