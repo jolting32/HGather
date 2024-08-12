@@ -86,6 +86,8 @@ local default_settings = T{
     hunt_rewards = T{ },
     hunt_items = 0,
     hunt_kills = 0,
+    hunt_steals = 0,
+    hunt_stealt = 0,
 };
 
 -- HGather Variables
@@ -923,6 +925,10 @@ function imgui_hunt_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+    local steal_acc = (hgather.settings.hunt_steals / hgather.settings.hunt_stealt) * 100
+    if (string.format('%.2f', steal_acc)  == 'nan') then
+        steal_acc = 0
+    end
 
     local output_text = '';
 
@@ -934,6 +940,7 @@ function imgui_hunt_output()
         
     output_text = 'Mobs Hunted: ' .. hgather.settings.hunt_kills;
     output_text = output_text .. '\nItems Obtained: ' .. hgather.settings.hunt_items;
+    output_text = output_text .. '\nItems Stolen: ' .. hgather.settings.hunt_steals  .. ' (' .. hgather.settings.hunt_stealt .. ' attempts / ' .. string.format('%.2f', steal_acc) .. '%)';
     output_text = output_text .. '\nMob Output: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
@@ -1008,6 +1015,8 @@ function clear_rewards(args)
         hgather.settings.hunt_rewards = { };
         hgather.settings.hunt_break = 0;
         hgather.settings.hunt_items = 0;
+        hgather.settings.hunt_steals = 0;
+        hgather.settings.hunt_stealt = 0;
     elseif (#args == 3) then
         if (args[3]:any('digg')) then
             hgather.settings.dig_rewards = { };
@@ -1043,6 +1052,8 @@ function clear_rewards(args)
             hgather.settings.hunt_rewards = { };
             hgather.settings.hunt_break = 0;
             hgather.settings.hunt_kills = 0;
+            hgather.settings.hunt_steals = 0;
+            hgather.settings.hunt_stealt = 0;
         end
     end
 end
@@ -1556,12 +1567,27 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
         end
         hgather.attempt_type = '';
     elseif (hgather.imgui_window == 'hunting') then
-        local hitem = string.match(message, string.lower(hgather.myname) .. " obtains an? ([^,!]+).");
-        local hkill = string.match(message, string.lower(hgather.myname) .. " defeats the ");
+        local hstealt = string.match(message, string.lower(hgather.myname) .. ' uses steal.');
+        local hsteals = string.match(message, string.lower(hgather.myname) .. ' steals an? ([^,!]+) from ');
+        -- simplelog handling
+        local hstealtsmp = string.match(message, '%[' .. string.lower(hgather.myname) .. '%] steal ');
+        local hstealssmp = string.match(message, '%[' .. string.lower(hgather.myname) .. '%] steal .* %(([^,!]+)%)');
+        local hitem = string.match(message, string.lower(hgather.myname) .. ' obtains an? ([^,!]+).');
+        local hkill = string.match(message, string.lower(hgather.myname) .. ' defeats the ');
         if (hkill) then
             hgather.settings.hunt_kills = hgather.settings.hunt_kills + 1;
+        elseif (hstealt or hstealtsmp) then
+            hgather.settings.hunt_stealt = hgather.settings.hunt_stealt + 1;
         end
-        handle_hunt(hitem);
+        if (hitem) then
+            handle_hunt(hitem);
+        elseif (hsteals) then
+            hgather.settings.hunt_steals = hgather.settings.hunt_steals + 1;
+            handle_hunt(hsteals);
+        elseif (hstealssmp) then
+            hgather.settings.hunt_steals = hgather.settings.hunt_steals + 1;
+            handle_hunt(hstealssmp);
+        end
     end
 end);
 
