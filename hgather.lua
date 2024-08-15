@@ -1013,8 +1013,8 @@ function clear_rewards(args)
         hgather.settings.logg_tries = 0;
         -- hunting
         hgather.settings.hunt_rewards = { };
-        hgather.settings.hunt_break = 0;
         hgather.settings.hunt_items = 0;
+        hgather.settings.hunt_kills = 0;
         hgather.settings.hunt_steals = 0;
         hgather.settings.hunt_stealt = 0;
     elseif (#args == 3) then
@@ -1050,7 +1050,7 @@ function clear_rewards(args)
         elseif (args[3]:any('hunt')) then
             -- hunting
             hgather.settings.hunt_rewards = { };
-            hgather.settings.hunt_break = 0;
+            hgather.settings.hunt_items = 0;
             hgather.settings.hunt_kills = 0;
             hgather.settings.hunt_steals = 0;
             hgather.settings.hunt_stealt = 0;
