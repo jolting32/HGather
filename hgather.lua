@@ -88,6 +88,7 @@ local default_settings = T{
     hunt_kills = 0,
     hunt_steals = 0,
     hunt_stealt = 0,
+    hunt_rawgil = 0,
 };
 
 -- HGather Variables
@@ -941,6 +942,7 @@ function imgui_hunt_output()
     output_text = 'Mobs Hunted: ' .. hgather.settings.hunt_kills;
     output_text = output_text .. '\nItems Obtained: ' .. hgather.settings.hunt_items;
     output_text = output_text .. '\nItems Stolen: ' .. hgather.settings.hunt_steals  .. ' (' .. hgather.settings.hunt_stealt .. ' attempts / ' .. string.format('%.2f', steal_acc) .. '%)';
+    output_text = output_text .. '\nMugged & Dropped gil: ' .. format_int(hgather.settings.hunt_rawgil) .. ' gil'
     output_text = output_text .. '\nMob Output: ' .. string.format('%.2f', accuracy) .. '%';
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
@@ -972,6 +974,7 @@ function imgui_hunt_output()
     output_text = '';
     imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
 
+    total_worth = total_worth + hgather.settings.hunt_rawgil
     -- only update gil_per_hour every 3 seconds
     if ((ashita.time.clock()['s'] % 3) == 0) then
         hgather.hunting.hunt_gph = math.floor((total_worth / elapsed_time) * 3600); 
@@ -1017,6 +1020,7 @@ function clear_rewards(args)
         hgather.settings.hunt_kills = 0;
         hgather.settings.hunt_steals = 0;
         hgather.settings.hunt_stealt = 0;
+        hgather.settings.hunt_rawgil = 0;
     elseif (#args == 3) then
         if (args[3]:any('digg')) then
             hgather.settings.dig_rewards = { };
@@ -1054,6 +1058,7 @@ function clear_rewards(args)
             hgather.settings.hunt_kills = 0;
             hgather.settings.hunt_steals = 0;
             hgather.settings.hunt_stealt = 0;
+            hgather.settings.hunt_rawgil = 0;
         end
     end
 end
@@ -1569,11 +1574,15 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
     elseif (hgather.imgui_window == 'hunting') then
         local hstealt = string.match(message, string.lower(hgather.myname) .. ' uses steal.');
         local hsteals = string.match(message, string.lower(hgather.myname) .. ' steals an? ([^,!]+) from ');
+        local hmug = string.match(message, string.lower(hgather.myname) .. ' mugs ([0-9,]+) gil from ');
         -- simplelog handling
         local hstealtsmp = string.match(message, '%[' .. string.lower(hgather.myname) .. '%] steal ');
         local hstealssmp = string.match(message, '%[' .. string.lower(hgather.myname) .. '%] steal .* %(([^,!]+)%)');
+        local hmugsmp = string.match(message, '%[' .. string.lower(hgather.myname) .. '%] ([0-9,]+) gil mug');
+
         local hitem = string.match(message, string.lower(hgather.myname) .. ' obtains an? ([^,!]+).');
         local hkill = string.match(message, string.lower(hgather.myname) .. ' defeats the ');
+        local hgil = string.match(message, string.lower(hgather.myname) .. ' obtains ([0-9,]+) gil.');
 
         if (hgather.settings.first_attempt == 0) then
             hgather.settings.first_attempt = ashita.time.clock()['ms'];
@@ -1594,6 +1603,12 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
             hgather.last_attempt = ashita.time.clock()['ms'];
             hgather.settings.hunt_steals = hgather.settings.hunt_steals + 1;
             handle_hunt(hstealssmp);
+        elseif (hgil) then
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + tonumber(hgil)
+        elseif (hmugsmp) then
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + tonumber(hmugsmp)
+        elseif (hmug) then
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + tonumber(hmug)
         end
     end
 end);
