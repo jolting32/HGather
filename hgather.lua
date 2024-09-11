@@ -1604,11 +1604,11 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
             hgather.settings.hunt_steals = hgather.settings.hunt_steals + 1;
             handle_hunt(hstealssmp);
         elseif (hgil) then
-            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + tonumber(hgil)
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hgil, ',', '')
         elseif (hmugsmp) then
-            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + tonumber(hmugsmp)
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hmugsmp, ',', '')
         elseif (hmug) then
-            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + tonumber(hmug)
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hmug, ',', '')
         end
     end
 end);
