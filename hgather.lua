@@ -1719,7 +1719,7 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
         local fishhook = string.match(message, 'something caught the hook.');
         local fishmhook = string.match(message, 'something clamps onto your line ferociously!');
         local fishlost = string.match(message, 'you lost your catch.');
-        local fishcatch = string.match(message, string.lower(hgather.myname) .. ' caught a ([^!]+)!');
+        local fishcatch = string.match(message, string.lower(hgather.myname) .. ' caught an? ([^!]+)!');
         local fishmonst = string.match(message, string.lower(hgather.myname) .. ' caught a monster!');
         local fishnum, fishxcatch = string.match(message, string.lower(hgather.myname) .. ' caught ([0-9]+) ([^!]+)!');
 
