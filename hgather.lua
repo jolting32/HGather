@@ -26,6 +26,7 @@ local default_settings = T{
     weather_display = T{ false, },
     lastitem_display = T{ false, },
     hunt_display = T{ false, },
+    fish_display = T{ false, },
     display_timeout = T{ 600 },
     opacity = T{ 1.0, },
     padding = T{ 1.0, },
@@ -82,6 +83,11 @@ local default_settings = T{
     logg_items = 0,
     logg_tries = 0,
     logg_break = 0,
+    -- fishing rewards
+    fish_rewards = T{ },
+    fish_items = 0,
+    fish_tries = 0,
+    fish_monst = 0,
     -- hunting rewards
     hunt_rewards = T{ },
     hunt_items = 0,
@@ -139,6 +145,9 @@ local hgather = T{
     hunting = T{
         hunt_gph = 0,
     },
+    fishing = T{
+        fish_gph = 0,
+    },
     myname = '',
 };
 
@@ -151,7 +160,7 @@ function render_editor()
     end
 
     imgui.SetNextWindowSize({ 500, 650, });
-    imgui.SetNextWindowSizeConstraints({ 500, 650, }, { FLT_MAX, FLT_MAX, });
+    imgui.SetNextWindowSizeConstraints({ 500, 700, }, { FLT_MAX, FLT_MAX, });
     if (imgui.Begin('HGather##Config', hgather.editor.is_open)) then
 
         -- imgui.SameLine();
@@ -199,7 +208,7 @@ end
 
 function render_general_config(settings)
     imgui.Text('General Settings');
-    imgui.BeginChild('settings_general', { 0, 255, }, true);
+    imgui.BeginChild('settings_general', { 0, 285, }, true);
         if ( imgui.Checkbox('Visible', hgather.settings.visible) ) then
             -- if the checkbox is interacted with, reset the last_attempt
             -- to force the window back open
@@ -226,6 +235,8 @@ function render_general_config(settings)
         imgui.ShowHelp('Toggles if current weather is shown.');
         imgui.Checkbox('Hunting Display', hgather.settings.hunt_display);
         imgui.ShowHelp('Toggles if hunt mode is shown.');
+        imgui.Checkbox('Fishing Display', hgather.settings.fish_display);
+        imgui.ShowHelp('Toggles if fish mode is shown.');
         imgui.Checkbox('Last Item Display', hgather.settings.lastitem_display);
         imgui.ShowHelp('Toggles if last item gathered is displayed.');
         imgui.Checkbox('Reset Rewards On Load', hgather.settings.reset_on_load);
@@ -917,6 +928,68 @@ function imgui_harv_output()
 end
 
 
+function imgui_fish_output()
+    local ImGuiStyleVar_ItemSpacing = 13;
+    local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
+
+    local total_worth = 0;
+    local accuracy = 0;
+    local moon_table = GetMoon();
+    local moon_phase = moon_table.MoonPhase;
+    local moon_percent = moon_table.MoonPhasePercent;
+
+    local output_text = '';
+
+    if (hgather.settings.fish_tries ~= 0) then
+        accuracy = (hgather.settings.fish_items / hgather.settings.fish_tries) * 100;
+    end
+
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 1});
+        
+    output_text = 'Lines cast: ' .. hgather.settings.fish_tries;
+    output_text = output_text .. '\nItems Caught: ' .. hgather.settings.fish_items;
+    output_text = output_text .. '\nMonsters Caught: ' .. hgather.settings.fish_monst;
+    output_text = output_text .. '\nFishing Accuracy: ' .. string.format('%.2f', accuracy) .. '%';
+    if (hgather.settings.moon_display[1]) then
+        output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
+    end
+
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
+    for k,v in pairs(hgather.settings.fish_rewards) do
+        itemTotal = 0;
+        if (hgather.pricing[k] ~= nil) then
+            total_worth = total_worth + hgather.pricing[k] * v;
+            itemTotal = v * hgather.pricing[k];
+        end
+              
+        if output_text ~= '' then
+            output_text = output_text .. '\n'
+        end
+              
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+    end
+
+    imgui.Text(output_text);
+    imgui.PopStyleVar();
+    imgui.Separator();
+    output_text = '';
+    imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {1, 4});
+
+    -- only update gil_per_hour every 3 seconds
+    if ((ashita.time.clock()['s'] % 3) == 0) then
+        hgather.fishing.fish_gph = math.floor((total_worth / elapsed_time) * 3600); 
+    end
+    output_text = output_text .. 'Gil Made: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hgather.fishing.fish_gph) .. ' gph)';
+
+    imgui.Text(output_text);
+end
+
+
 function imgui_hunt_output()
     local ImGuiStyleVar_ItemSpacing = 13;
     local elapsed_time = ashita.time.clock()['s'] - math.floor(hgather.settings.first_attempt / 1000.0);
@@ -1014,6 +1087,11 @@ function clear_rewards(args)
         hgather.settings.logg_break = 0;
         hgather.settings.logg_items = 0;
         hgather.settings.logg_tries = 0;
+        -- fishing
+        hgather.settings.fish_rewards = { };
+        hgather.settings.fish_monst = 0;
+        hgather.settings.fish_items = 0;
+        hgather.settings.fish_tries = 0;
         -- hunting
         hgather.settings.hunt_rewards = { };
         hgather.settings.hunt_items = 0;
@@ -1280,6 +1358,31 @@ function handle_hunt(hunt_success)
 end
 
 --[[
+    * Functions for handling successful/unsuccesful gathering attempts
+    *
+    * @param {string} fish_success - Item returned from successful fishing
+]]
+function handle_fish(fish_success)
+    -- force display to show if it is hidden after an attempt
+    if (hgather.settings.visible[1] == false) then
+        hgather.settings.visible[1] = true
+    end
+
+    -- increment item count and add to rewards list
+    if fish_success then
+        hgather.settings.fish_items = hgather.settings.fish_items + 1;
+
+        if (fish_success ~= nil) then
+            if (hgather.settings.fish_rewards[fish_success] == nil) then
+                hgather.settings.fish_rewards[fish_success] = 1;
+            elseif (hgather.settings.fish_rewards[fish_success] ~= nil) then
+                hgather.settings.fish_rewards[fish_success] = hgather.settings.fish_rewards[fish_success] + 1;
+            end
+        end
+    end
+end
+
+--[[
 * Prints the addon help information.
 *
 * @param {boolean} isError - Flag if this function was invoked due to an error.
@@ -1471,7 +1574,7 @@ ashita.events.register('packet_out', 'packet_out_cb', function (e)
             if (hgather.settings.first_attempt == 0) then
                 hgather.settings.first_attempt = ashita.time.clock()['ms'];
             end
-        elseif (hgather.imgui_window == 'harvest' or hgather.imgui_window == 'excavate' or hgather.imgui_window == 'logging' or hgather.imgui_window == 'mining') then
+        elseif (hgather.imgui_window == 'harvest' or hgather.imgui_window == 'excavate' or hgather.imgui_window == 'logging' or hgather.imgui_window == 'mining' or hgather.imgui_window == 'fishing') then
             hgather.attempt_type = hgather.imgui_window;
             hgather.last_attempt = ashita.time.clock()['ms'];
             if (hgather.settings.first_attempt == 0) then
@@ -1610,6 +1713,34 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
         elseif (hmug) then
             hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hmug, ',', '')
         end
+    elseif (hgather.imgui_window == 'fishing') then
+        local fishgu = string.match(message, 'you give up.');
+        local fishnothing = string.match(message, "you didn't catch anything.");
+        local fishhook = string.match(message, 'something caught the hook.');
+        local fishmhook = string.match(message, 'something clamps onto your line ferociously!');
+        local fishlost = string.match(message, 'you lost your catch.');
+        local fishcatch = string.match(message, string.lower(hgather.myname) .. ' caught a ([^!]+)!');
+        local fishmonst = string.match(message, string.lower(hgather.myname) .. ' caught a monster!');
+        local fishnum, fishxcatch = string.match(message, string.lower(hgather.myname) .. ' caught ([0-9]+) ([^!]+)!');
+
+        hgather.last_attempt = ashita.time.clock()['ms'];
+
+        if (hgather.settings.first_attempt == 0) then
+            hgather.settings.first_attempt = ashita.time.clock()['ms'];
+        end
+        if (fishgu or fishnothing or fishhook or fishmhook) then
+            hgather.settings.fish_tries = hgather.settings.fish_tries + 1;
+        end
+        if (fishmonst) then
+            hgather.settings.fish_monst = hgather.settings.fish_monst + 1;
+        elseif (fishnum and fishxcatch) then
+            for fishindex = 1, fishnum, 1
+            do
+                handle_fish(fishxcatch);
+            end
+        elseif (fishcatch) then
+            handle_fish(fishcatch);
+        end
     end
 end);
 
@@ -1675,6 +1806,11 @@ ashita.events.register('d3d_present', 'present_cb', function ()
             if ((hgather.settings.hunt_display[1]) and (imgui.BeginTabItem('Hunt', nil))) then
                 hgather.imgui_window = 'hunting';
                 imgui_hunt_output();
+                imgui.EndTabItem();
+            end
+            if ((hgather.settings.fish_display[1]) and (imgui.BeginTabItem('Fish', nil))) then
+                hgather.imgui_window = 'fishing';
+                imgui_fish_output();
                 imgui.EndTabItem();
             end
             imgui.EndTabBar();
