@@ -1,6 +1,8 @@
 # HGather
-This is a simple dig tracker for FFXI. This addon works with Ashita v4. 
+This is a simple Digging / HELM / Farm / Fish tracker for FFXI. This addon works with Ashita v4. 
 
+## Farm / Fish
+Currently experimental, enable through the /hgather settings as "Hunt" and "Fish" modes.
 
 ## Commands
 /hgather or /hgather editor - Opens the configuration menu
