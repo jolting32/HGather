@@ -8,7 +8,7 @@
 
 addon.name      = 'hgather';
 addon.author    = 'Hastega';
-addon.version   = '1.7.0';
+addon.version   = '1.7.1';
 addon.desc      = 'General purpose gathering tracker.';
 addon.link      = 'https://github.com/SlowedHaste/HGather';
 addon.commands  = {'/hgather'};
@@ -1728,7 +1728,7 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
         if (hgather.settings.first_attempt == 0) then
             hgather.settings.first_attempt = ashita.time.clock()['ms'];
         end
-        if (fishgu or fishnothing or fishhook or fishmhook) then
+        if (fishgu or fishnothing or fishlost or fishcatch or fishmonst or fishxcatch) then
             hgather.settings.fish_tries = hgather.settings.fish_tries + 1;
         end
         if (fishmonst) then
