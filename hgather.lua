@@ -2072,7 +2072,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
             imgui.EndTabBar();
         end
     end
-    imgui.End();
+    imgui.End(); 
 
 end);
 
