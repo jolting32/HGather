@@ -1178,12 +1178,11 @@ function imgui_hunt_output()
             itemTotal = v * hgather.pricing[k];
         end
         
-		hunt_drop_percent = (v / hgather.settings.hunt_items) * 100;
         if output_text ~= '' then
             output_text = output_text .. '\n'
         end
               
-        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.2f', harv_drop_percent) .. '%';
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
 
     imgui.Text(output_text);
