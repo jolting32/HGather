@@ -25,6 +25,7 @@ local data      = require('constants');
 local default_settings = T
 	{
 		visible = T{false},
+		permvis = T{false},
 		moon_display = T{true},
 		weather_display = T{false},
 		lastitem_display = T{false},
@@ -258,7 +259,7 @@ end
 
 function render_general_config(settings)
     imgui.Text('General Settings');
-    imgui.BeginChild('settings_general', { 0, 285, }, true);
+    imgui.BeginChild('settings_general', { 0, 300, }, true);
 	
     if (imgui.Checkbox('Visible', hgather.settings.visible)) then
         -- if the checkbox is interacted with, reset the last_attempt to force the window back open
@@ -266,6 +267,11 @@ function render_general_config(settings)
     end
 	
     imgui.ShowHelp('Toggles if HGather is visible or not.');
+	if (imgui.Checkbox('Perm Visible', hgather.settings.permvis)) then
+		-- if the checkbox is interacted with, reset the last_attempt to force the window back open
+        hgather.settings.visible[1] = true;
+    end
+	imgui.ShowHelp('Toggles if HGather is visible permanently or not.');
     imgui.SliderFloat('Opacity', hgather.settings.opacity, 0.125, 1.0, '%.3f');
     imgui.ShowHelp('The opacity of the HGather window.');
     imgui.SliderFloat('Font Scale', hgather.settings.font_scale, 0.1, 2.0, '%.3f');
@@ -546,8 +552,10 @@ function imgui_dig_output()
         if output_text ~= '' then
             output_text = output_text .. '\n'
         end
+		
+		dig_drop_percent = (v / hgather.settings.dig_items) * 100;
               
-        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+        output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.1f', dig_drop_percent) .. '%';
     end
 
     imgui.Text(output_text);
@@ -679,11 +687,22 @@ function format_dig_output()
             itemTotal = v * hgather.pricing[k];
         end
 		
-		dig_drop_percent = (v / hgather.settings.dig_items) * 100;
+		
               
-        output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.2f', dig_drop_percent) .. '%';
+        output_text = output_text .. '\n' .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
-
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
+    end
+	
     -- imgui.Separator();
     output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
 
@@ -774,7 +793,18 @@ function imgui_mine_output()
               
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.2f', mine_drop_percent) .. '%';
     end
-
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
+    end
+	
     imgui.Text(output_text);
     imgui.PopStyleVar();
     imgui.Separator();
@@ -866,7 +896,18 @@ function imgui_exca_output()
               
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.2f', exca_drop_percent) .. '%';
     end
-
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
+    end
+	
     imgui.Text(output_text);
     imgui.PopStyleVar();
     imgui.Separator();
@@ -958,7 +999,18 @@ function imgui_logg_output()
               
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.2f', logg_drop_percent) .. '%';
     end
-
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
+    end
+	
     imgui.Text(output_text);
     imgui.PopStyleVar();
     imgui.Separator();
@@ -1036,7 +1088,18 @@ function imgui_harv_output()
         
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g) ' .. string.format('%.2f', harv_drop_percent) .. '%';
     end
-
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
+    end
+	
     imgui.Text(output_text);
     imgui.PopStyleVar();
     imgui.Separator();
@@ -1113,6 +1176,17 @@ function imgui_fish_output()
               
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
     end
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
+    end
 
     imgui.Text(output_text);
     imgui.PopStyleVar();
@@ -1165,7 +1239,7 @@ function imgui_hunt_output()
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
 
-    imgui.Text(output_text);
+	imgui.Text(output_text);
     imgui.PopStyleVar();
     imgui.Separator();
     output_text = '';
@@ -1181,10 +1255,21 @@ function imgui_hunt_output()
         if output_text ~= '' then
             output_text = output_text .. '\n'
         end
-              
+		    
         output_text = output_text .. k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+	end
+	
+	if output_text ~= '' then
+		local lines = {};
+		for line in output_text:gmatch("([^\n]+)") do
+			table.insert(lines, line);
+		end
+		
+		table.sort(lines);
+		
+		output_text = table.concat(lines, "\n");
     end
-
+	
     imgui.Text(output_text);
     imgui.PopStyleVar();
     imgui.Separator();
@@ -2010,7 +2095,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
     local last_attempt_secs = (ashita.time.clock()['ms'] - hgather.last_attempt) / 1000.0;
     render_editor();
 
-    if (hgather.last_attempt ~= 0 and last_attempt_secs > hgather.settings.display_timeout[1]) then
+    if (hgather.last_attempt ~= 0 and last_attempt_secs > hgather.settings.display_timeout[1] and hgather.settings.permvis[1] == false) then
         hgather.settings.visible[1] = false;
     end
 
@@ -2071,7 +2156,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
             imgui.EndTabBar();
         end
     end
-    imgui.End(); 
+    imgui.End();
 
 end);
 
