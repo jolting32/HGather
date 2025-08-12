@@ -40,28 +40,31 @@ This would price pebbles at 100g.
 If you update the prices while in game, make sure to use the **/hgather update** command to update the prices.
 
 ## Updates 
-June 12, 2025
-- Changed the variables for the chat to monitor.
-	This fixed it to where certain items would never be counted because of the wording. The problem existed when it was matching the message wording.
-- Moved the variables outside of the if statement to capture the text before the if statement. 
-	This fixed the issue to where the count would not be exact. The problem was if a different message came in right after the item was gotten, it would take the new message instead of the intended message.
-- Added a percentage to the break counter for mining.  
-	This enhances the addon to show how often breaks will happen. 
-- Added in percentage to all items gathered.
-	This enhances the addon to show how likely you are to get an item. 
-- Updated the item list for the tracker.
-	Added more items to the list that were not there before. 
-- Cleaned up the code a little due to the changes that were made. 
-	I removed several things from the addon that were redundant after the changes that were implemented.
-	
-June 13, 2025
-- Removed the hunt percentage as it broke the Addon and it is not needed.
-	This is not in the Hunt tab as you may kill different mobs and the results will not be accurate.
-
 August 12, 2025
 - Updated the item list for the tracker.
-	Added more items to the list that were not there before. 
+	- Added more items to the list that were not there before. 
 - Added a check box to always keep Hgather open
-	This is an optional check box to always keep it open. Checking the box will also check the visible option as well.
+	- This is an optional check box to always keep it open. Checking the box will also check the visible option as well.
 - The list automatically sort by alphabetical order.
-	All the list will not display items in alphabetical order. 
+	- All the list will not display items in alphabetical order. 
+
+June 13, 2025
+- Removed the hunt percentage as it broke the Addon and it is not needed.
+	- This is not in the Hunt tab as you may kill different mobs and the results will not be accurate.	
+
+June 12, 2025
+- Changed the variables for the chat to monitor.
+	- This fixed it to where certain items would never be counted because of the wording. The problem existed when it was matching the message wording.
+- Moved the variables outside of the if statement to capture the text before the if statement. 
+	- This fixed the issue to where the count would not be exact. The problem was if a different message came in right after the item was gotten, it would take the new message instead of the intended message.
+- Added a percentage to the break counter for mining.  
+	- This enhances the addon to show how often breaks will happen. 
+- Added in percentage to all items gathered.
+	- This enhances the addon to show how likely you are to get an item. 
+- Updated the item list for the tracker.
+	- Added more items to the list that were not there before. 
+- Cleaned up the code a little due to the changes that were made. 
+	- I removed several things from the addon that were redundant after the changes that were implemented.
+	
+
+
