@@ -1217,6 +1217,7 @@ function imgui_hunt_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+	local weather = GetWeather();
     local steal_acc = (hgather.settings.hunt_steals / hgather.settings.hunt_stealt) * 100
     if (string.format('%.2f', steal_acc)  == 'nan') then
         steal_acc = 0
@@ -1240,6 +1241,13 @@ function imgui_hunt_output()
     end
 
 	imgui.Text(output_text);
+	
+	if (hgather.settings.weather_display[1]) then
+        imgui.Text('Weather: ');
+        imgui.SameLine();
+        imgui.TextColored(weather_colors[weather], weather);
+    end
+	
     imgui.PopStyleVar();
     imgui.Separator();
     output_text = '';
