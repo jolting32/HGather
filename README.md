@@ -40,6 +40,10 @@ This would price pebbles at 100g.
 If you update the prices while in game, make sure to use the **/hgather update** command to update the prices.
 
 ## Updates 
+August 22, 2025
+- Added an inventory count to all the tabs.
+	- This is useful to allow you to see how many spots you have left in your inventory.
+
 August 21, 2025
 - Updated the hunt tab to include the weather.
     - This is useful for farming elementals in a zone. This is turned on by the weather display checkbox in the menu.

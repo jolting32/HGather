@@ -602,6 +602,9 @@ function format_dig_output()
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
     local weather = GetWeather();
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
 	
 	---------------------------------------------------
     -- dig accuracy estimate formulas taken from ASB --
@@ -656,6 +659,7 @@ function format_dig_output()
     if (hgather.settings.weather_display[1]) then
         output_text = output_text .. '\nWeather: ' + weather;
     end
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 	
 	-------------------------------------------------------------------------------------------
     -- moon phase Waxing Crescent, between 7-24%, active weather (not clear/sunshine/clouds) --
@@ -743,6 +747,9 @@ function imgui_mine_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
 
     local output_text = '';
     
@@ -772,6 +779,7 @@ function imgui_mine_output()
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 
     imgui.Text(output_text);
     imgui.PopStyleVar();
@@ -848,6 +856,9 @@ function imgui_exca_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
 
     local output_text = '';
 	
@@ -875,6 +886,7 @@ function imgui_exca_output()
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 
     imgui.Text(output_text);
     imgui.PopStyleVar();
@@ -951,6 +963,9 @@ function imgui_logg_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
 
     local output_text = '';
 
@@ -978,6 +993,7 @@ function imgui_logg_output()
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 
     imgui.Text(output_text);
     imgui.PopStyleVar();
@@ -1051,6 +1067,9 @@ function imgui_harv_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
 
     local output_text = '';
 
@@ -1067,6 +1086,7 @@ function imgui_harv_output()
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 
     imgui.Text(output_text);
     imgui.PopStyleVar();
@@ -1140,6 +1160,9 @@ function imgui_fish_output()
     local moon_table = GetMoon();
     local moon_phase = moon_table.MoonPhase;
     local moon_percent = moon_table.MoonPhasePercent;
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
 
     local output_text = '';
 
@@ -1156,6 +1179,8 @@ function imgui_fish_output()
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
+	
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 
     imgui.Text(output_text);
     imgui.PopStyleVar();
@@ -1219,6 +1244,10 @@ function imgui_hunt_output()
     local moon_percent = moon_table.MoonPhasePercent;
 	local weather = GetWeather();
     local steal_acc = (hgather.settings.hunt_steals / hgather.settings.hunt_stealt) * 100
+	local inventory = AshitaCore:GetMemoryManager():GetInventory();
+	local usedBagSlots = inventory:GetContainerCount(0);
+	local maxBagSlots = inventory:GetContainerCountMax(0);
+	
     if (string.format('%.2f', steal_acc)  == 'nan') then
         steal_acc = 0
     end
@@ -1239,6 +1268,7 @@ function imgui_hunt_output()
     if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
     end
+	output_text = output_text .. '\nInventory: ' .. usedBagSlots .. '/' .. maxBagSlots;
 
 	imgui.Text(output_text);
 	
