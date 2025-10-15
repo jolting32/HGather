@@ -1,6 +1,11 @@
 # HGather
 This is a simple Digging / HELM / Farm / Fish tracker for FFXI. This addon works with Ashita v4. 
 
+Important: When downloading this copy, if you have an older copy of hgather, please delete the hgather folders from both of the following directories:
+- HorizonXI\Game\addons
+- HorizonXI\Game\config\addons
+If you do not do this, you may experience weird issues with this version of hgather.
+
 ## HELM
 In order to handle HELM macros that rely on <lastst> the addon defaults to whatever HELM activity you have active in the addon if it can not determine what type of target resource you are farming.
 
@@ -39,7 +44,10 @@ This would price pebbles at 100g.
 
 If you update the prices while in game, make sure to use the **/hgather update** command to update the prices.
 
-## Updates 
+## Updates
+October 15, 2025
+- Updated the constants.lua with a small pricing update.
+
 August 22, 2025
 - Added an inventory count to all the tabs.
 	- This is useful to allow you to see how many spots you have left in your inventory.
