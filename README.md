@@ -45,6 +45,9 @@ This would price pebbles at 100g.
 If you update the prices while in game, make sure to use the **/hgather update** command to update the prices.
 
 ## Updates
+June 17, 2026
+- Updated the gil on the hunt tab to include treasure chests
+
 October 15, 2025
 - Updated the constants.lua with a small pricing update.
 

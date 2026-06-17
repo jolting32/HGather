@@ -496,7 +496,7 @@ function imgui_dig_output()
         end
     end
 	
-    output_text = output_text .. 'Dig Accuracy: ' .. string.format('%.1f', accuracy) .. '% act -- ' .. string.format('%.1f', accEstimate) .. '% est';
+    --output_text = output_text .. 'Dig Accuracy: ' .. string.format('%.1f', accuracy) .. '% act -- ' .. string.format('%.1f', accEstimate) .. '% est';
     
 	if (hgather.settings.moon_display[1]) then
         output_text = output_text .. '\nMoon: ' + moon_phase + ' ('+ moon_percent + '%)';
@@ -1993,6 +1993,7 @@ ashita.events.register('text_in', 'text_in_cb', function(e)
     local hitem = string.match(message, string.lower(hgather.myname) .. ' obtains an? ([^,!]+).');
     local hkill = string.match(message, string.lower(hgather.myname) .. ' defeats the ');
     local hgil = string.match(message, string.lower(hgather.myname) .. ' obtains ([0-9,]+) gil.');
+	local hchest = string.match(message, 'obtained ([0-9,]+) gil.');
 	
 	------------------------
 	-- fishing to monitor --
@@ -2066,7 +2067,7 @@ ashita.events.register('text_in', 'text_in_cb', function(e)
 	-------------------
 	-- hunting logic --
 	-------------------
-    elseif (hgather.imgui_window == 'hunting' and (hkill or hstealt or hstealtsmp or hitem or hsteals or hstealssmp or hgil or hmugsmp or hmug)) then
+    elseif (hgather.imgui_window == 'hunting' and (hkill or hstealt or hstealtsmp or hitem or hsteals or hstealssmp or hgil or hchest or hmugsmp or hmug)) then
         if (hgather.settings.first_attempt == 0) then
             hgather.settings.first_attempt = ashita.time.clock()['ms'];
         end
@@ -2088,6 +2089,8 @@ ashita.events.register('text_in', 'text_in_cb', function(e)
             handle_hunt(hstealssmp);
         elseif (hgil) then
             hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hgil, ',', '')
+		elseif (hchest) then
+            hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hchest, ',', '')
         elseif (hmugsmp) then
             hgather.settings.hunt_rawgil = hgather.settings.hunt_rawgil + string.gsub(hmugsmp, ',', '')
         elseif (hmug) then
